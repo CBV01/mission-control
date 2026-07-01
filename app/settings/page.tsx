@@ -7,7 +7,7 @@ import {
   Settings as SettingsIcon, Key, Brain, Palette, Server, Save,
   Eye, EyeOff, Copy, RefreshCw, Check, Plus, ChevronRight, X, Sparkles,
   Layout as LayoutIcon, MonitorSmartphone, Bell, Shield, Activity,
-  Database, Globe, Zap, Trash2, ExternalLink,
+  Database, Globe, Zap, Trash2, ExternalLink, Cpu, Volume2,
 } from 'lucide-react';
 import { ClientShell } from '@/components/shell/client-shell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';

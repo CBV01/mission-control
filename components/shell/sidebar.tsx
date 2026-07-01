@@ -1,15 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Home, MessageCircle, Activity, Network, GitBranch, KanbanSquare, Palette,
   BarChart3, Clock, Wrench, FileText, Brain, Settings, Zap,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, ChevronDown, Users, PieChart, User, Mail, Phone
 } from 'lucide-react';
 import { useUIStore, type PageKey } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Map page keys → Next.js routes
 const ROUTES: Record<PageKey, string> = {
@@ -26,12 +28,31 @@ const ROUTES: Record<PageKey, string> = {
   logs: '/logs',
   memory: '/memory',
   settings: '/settings',
+  // Leads routes
+  leads: '/leads/summary',
+  'leads-summary': '/leads/summary',
+  'leads-list': '/leads',
+  'leads-profile': '/leads/profile',
+  'leads-cold-call': '/leads/cold-call',
+  'leads-outreach-overview': '/leads/outreach/overview',
+  'leads-outreach-templates': '/leads/outreach/templates',
+  'leads-outreach-campaign': '/leads/outreach/campaign',
+  'leads-outreach-outbox': '/leads/outreach/outbox',
+  'leads-outreach-accounts': '/leads/outreach/accounts',
 };
+
+interface NavSubItem {
+  id: PageKey;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  subItems?: { id: PageKey; label: string }[];
+}
 
 interface NavItem {
   id: PageKey;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  subItems?: NavSubItem[];
 }
 
 interface NavGroup {
@@ -45,6 +66,29 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'home', label: 'Home', icon: Home },
       { id: 'chat', label: 'Chat', icon: MessageCircle },
+      {
+        id: 'leads',
+        label: 'Leads',
+        icon: Users,
+        subItems: [
+          { id: 'leads-summary', label: 'Summary', icon: PieChart },
+          { id: 'leads-list', label: 'Leads', icon: Users },
+          { id: 'leads-profile', label: 'Profile', icon: User },
+          {
+            id: 'leads-outreach-overview',
+            label: 'Outreach',
+            icon: Mail,
+            subItems: [
+              { id: 'leads-outreach-overview', label: 'Overview' },
+              { id: 'leads-outreach-templates', label: 'Templates' },
+              { id: 'leads-outreach-campaign', label: 'Campaign' },
+              { id: 'leads-outreach-outbox', label: 'Outbox' },
+              { id: 'leads-outreach-accounts', label: 'Accounts' },
+            ],
+          },
+          { id: 'leads-cold-call', label: 'Cold-call', icon: Phone },
+        ],
+      },
     ],
   },
   {
@@ -85,21 +129,28 @@ const navGroups: NavGroup[] = [
 
 export function Sidebar() {
   const { setPage, sidebarCollapsed, toggleSidebar } = useUIStore();
-  const router = useRouter();
   const pathname = usePathname();
 
   // Hover-expand while collapsed
   const [hoverExpand, setHoverExpand] = React.useState(false);
   const isCollapsed = sidebarCollapsed && !hoverExpand;
 
+  // Track expanded state for nested menus
+  const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
+
   // Derive active page from current pathname
   const currentPage: PageKey =
     (Object.entries(ROUTES).find(([, route]) => route === pathname)?.[0] as PageKey) ?? 'home';
 
-  const navigate = (id: PageKey) => {
-    setPage(id);
-    router.push(ROUTES[id]);
-  };
+  // Automatically expand sections depending on active route
+  React.useEffect(() => {
+    if (pathname.startsWith('/leads')) {
+      setExpandedItems((prev) => ({ ...prev, leads: true }));
+    }
+    if (pathname.startsWith('/leads/outreach')) {
+      setExpandedItems((prev) => ({ ...prev, outreach: true }));
+    }
+  }, [pathname]);
 
   return (
     <aside
@@ -145,11 +196,28 @@ export function Sidebar() {
               )}
               <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => {
-                  const isActive = currentPage === item.id;
+                  const isParentOfActive = item.subItems?.some(
+                    (sub) => pathname === ROUTES[sub.id] || sub.subItems?.some((ss) => pathname === ROUTES[ss.id])
+                  );
+                  const isActive = pathname === ROUTES[item.id] || isParentOfActive;
                   const Icon = item.icon;
-                  const button = (
-                    <button
-                      onClick={() => navigate(item.id)}
+                  const hasSub = !!item.subItems;
+                  const isOpen = expandedItems.leads && hasSub;
+
+                  const linkItem = (
+                    <Link
+                      href={ROUTES[item.id]}
+                      onClick={(e) => {
+                        // Keep modifier keys functional for spawning new tabs natively
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || (e.button && e.button === 1)) {
+                          return;
+                        }
+                        if (hasSub) {
+                          e.preventDefault();
+                          setExpandedItems((prev) => ({ ...prev, leads: !prev.leads }));
+                        }
+                        setPage(item.id);
+                      }}
                       className={cn(
                         'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ease-out-expo cursor-pointer',
                         'focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-surface',
@@ -162,21 +230,137 @@ export function Sidebar() {
                       {isActive && <span className="nav-active-indicator" aria-hidden />}
                       <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-accent-cyan' : 'text-text-tertiary group-hover:text-text-secondary')} />
                       {!isCollapsed && (
-                        <span className="truncate whitespace-nowrap">
-                          {item.label}
-                        </span>
+                        <>
+                          <span className="truncate whitespace-nowrap flex-1 text-left">
+                            {item.label}
+                          </span>
+                          {hasSub && (
+                            <ChevronDown
+                              className={cn(
+                                'h-3.5 w-3.5 text-text-tertiary transition-transform duration-200',
+                                isOpen && 'transform rotate-180 text-text-secondary'
+                              )}
+                            />
+                          )}
+                        </>
                       )}
-                    </button>
+                    </Link>
                   );
 
                   return (
-                    <li key={item.id}>
+                    <li key={item.id} className="flex flex-col">
                       {isCollapsed ? (
                         <Tooltip content={item.label} side="right">
-                          {button}
+                          {linkItem}
                         </Tooltip>
                       ) : (
-                        button
+                        linkItem
+                      )}
+
+                      {/* Level 1 Submenu */}
+                      {!isCollapsed && hasSub && (
+                        <AnimatePresence initial={false}>
+                          {isOpen && (
+                            <motion.ul
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2, ease: 'easeInOut' }}
+                              className="flex flex-col gap-0.5 overflow-hidden ml-5 border-l border-white/5 pl-3.5 mt-0.5"
+                            >
+                              {item.subItems?.map((subItem) => {
+                                 const isSubActiveParent = subItem.subItems?.some((ss) => pathname === ROUTES[ss.id]);
+                                 const isSubActive = pathname === ROUTES[subItem.id] || isSubActiveParent;
+                                 const SubIcon = subItem.icon;
+                                 const hasSubSub = !!subItem.subItems;
+                                 const isSubOpen = expandedItems.outreach && hasSubSub;
+
+                                return (
+                                  <li key={subItem.id} className="flex flex-col">
+                                    <Link
+                                      href={ROUTES[subItem.id]}
+                                      onClick={(e) => {
+                                        if (e.metaKey || e.ctrlKey || e.shiftKey || (e.button && e.button === 1)) {
+                                          return;
+                                        }
+                                        if (hasSubSub) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setExpandedItems((prev) => ({ ...prev, outreach: !prev.outreach }));
+                                        }
+                                        setPage(subItem.id);
+                                      }}
+                                      className={cn(
+                                        'group relative flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-all duration-200 ease-out-expo cursor-pointer',
+                                        isSubActive
+                                          ? 'text-text-primary'
+                                          : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
+                                      )}
+                                    >
+                                      {SubIcon && <SubIcon className={cn('h-3.5 w-3.5 flex-shrink-0', isSubActive ? 'text-accent-cyan/80' : 'text-text-tertiary group-hover:text-text-secondary')} />}
+                                      <span className="truncate whitespace-nowrap flex-1 text-left">
+                                        {subItem.label}
+                                      </span>
+                                      {hasSubSub && (
+                                        <ChevronDown
+                                          className={cn(
+                                            'h-3 w-3 text-text-tertiary transition-transform duration-200',
+                                            isSubOpen && 'transform rotate-180 text-text-secondary'
+                                          )}
+                                        />
+                                      )}
+                                    </Link>
+
+                                    {/* Level 2 Submenu */}
+                                    {hasSubSub && (
+                                      <AnimatePresence initial={false}>
+                                        {isSubOpen && (
+                                          <motion.ul
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.15, ease: 'easeInOut' }}
+                                            className="flex flex-col gap-0.5 overflow-hidden ml-4 border-l border-white/5 pl-2.5 mt-0.5"
+                                          >
+                                            {subItem.subItems?.map((subSubItem) => {
+                                              const isSubSubActive = pathname === ROUTES[subSubItem.id];
+                                              return (
+                                                <li key={subSubItem.id}>
+                                                  <Link
+                                                    href={ROUTES[subSubItem.id]}
+                                                    onClick={(e) => {
+                                                      if (e.metaKey || e.ctrlKey || e.shiftKey || (e.button && e.button === 1)) {
+                                                        return;
+                                                      }
+                                                      setPage(subSubItem.id);
+                                                    }}
+                                                    className={cn(
+                                                      'relative flex w-full items-center gap-2 rounded px-2 py-1 text-xs font-medium transition-all duration-150 cursor-pointer',
+                                                      isSubSubActive
+                                                        ? 'text-accent-cyan font-semibold'
+                                                        : 'text-text-tertiary hover:text-text-secondary hover:bg-white/[0.01]'
+                                                    )}
+                                                  >
+                                                    {isSubSubActive && (
+                                                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-accent-cyan" />
+                                                    )}
+                                                    <span className={cn('truncate whitespace-nowrap', isSubSubActive && 'pl-2 transition-all')}>
+                                                      {subSubItem.label}
+                                                    </span>
+                                                  </Link>
+                                                </li>
+                                              );
+                                            })}
+                                          </motion.ul>
+                                        )}
+                                      </AnimatePresence>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
                       )}
                     </li>
                   );

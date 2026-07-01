@@ -14,6 +14,7 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  bodyClassName?: string;
 }
 
 const sizeClasses = {
@@ -23,7 +24,7 @@ const sizeClasses = {
   xl: 'max-w-6xl',
 };
 
-export function Modal({ open, onClose, title, description, children, footer, size = 'md' }: ModalProps) {
+export function Modal({ open, onClose, title, description, children, footer, size = 'md', bodyClassName }: ModalProps) {
   // ESC handler
   React.useEffect(() => {
     if (!open) return;
@@ -83,7 +84,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-5">{children}</div>
+            <div className={bodyClassName ?? 'flex-1 overflow-y-auto p-5'}>{children}</div>
 
             {footer && (
               <div className="flex items-center justify-end gap-2 p-5 border-t border-white/5">

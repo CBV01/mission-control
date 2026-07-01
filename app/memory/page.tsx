@@ -606,8 +606,8 @@ function GraphCanvas({
                 y2={t.y}
                 stroke={dim ? 'rgba(255,255,255,0.05)' : 'rgba(6, 182, 212, 0.5)'}
                 strokeWidth={active ? 1.5 : 0.8}
-                onMouseEnter={() => setHoveredEdge(key)}
-                onMouseLeave={() => setHoveredEdge(null)}
+                onMouseEnter={() => setHoveredId(key)}
+                onMouseLeave={() => setHoveredId(null)}
                 className="transition-all duration-200"
               />
             );

@@ -7,7 +7,11 @@ import type { PersonalityTone } from './types';
 export type PageKey =
   | 'home' | 'chat' | 'health' | 'agents' | 'pipelines' | 'kanban'
   | 'studio' | 'analytics' | 'cron' | 'skills' | 'logs'
-  | 'memory' | 'settings';
+  | 'memory' | 'settings'
+  | 'leads' | 'leads-summary' | 'leads-list' | 'leads-profile'
+  | 'leads-outreach-overview' | 'leads-outreach-templates'
+  | 'leads-outreach-campaign' | 'leads-outreach-outbox'
+  | 'leads-outreach-accounts' | 'leads-cold-call';
 
 interface UIState {
   // Navigation

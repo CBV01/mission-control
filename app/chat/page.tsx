@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   Send, Bot, User, Terminal, Loader2,
   CheckCircle2, XCircle, AlertCircle, Info, Cpu, MessageCircle,
+  Trash2,
 } from 'lucide-react';
 import { ClientShell } from '@/components/shell/client-shell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
